@@ -30,7 +30,7 @@ export async function GET() {
     profiles: { username: string } | null;
   };
 
-  const entries: LeaderboardEntry[] = ((data ?? []) as Row[]).map((row, i) => ({
+  const entries: LeaderboardEntry[] = ((data ?? []) as unknown as Row[]).map((row, i) => ({
     username: row.profiles?.username ?? 'Ukjent',
     solved: row.solved,
     guessCount: row.guess_count,
