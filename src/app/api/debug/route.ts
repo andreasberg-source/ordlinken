@@ -5,23 +5,15 @@ import { getOsloDateString } from '@/lib/utils';
 export const runtime = 'nodejs';
 
 export async function GET() {
-  const vars = [
-    'NEXT_PUBLIC_SUPABASE_URL',
-    'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
-    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-    'SUPABASE_SERVICE_ROLE_KEY',
-  ];
-
-  const envResult = Object.fromEntries(
-    vars.map((key) => {
-      const val = process.env[key];
-      return [key, val ? `✅ set (${val.slice(0, 8)}...)` : '❌ missing'];
-    }),
-  );
-
   const today = getOsloDateString();
-  let puzzleResult: string;
 
+  const envVars = {
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅' : '❌ missing',
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ? '✅' : '❌ missing',
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅' : '❌ missing',
+  };
+
+  let puzzle = 'not checked';
   try {
     const supabase = createServiceClient();
     const { data, error } = await supabase
@@ -29,17 +21,10 @@ export async function GET() {
       .select('play_date, hint_word_a, hint_word_b, puzzle_number')
       .eq('play_date', today)
       .single();
-
-    if (error) puzzleResult = `❌ query error: ${error.message}`;
-    else if (!data) puzzleResult = `❌ no puzzle found for ${today}`;
-    else puzzleResult = `✅ found puzzle #${data.puzzle_number} (${data.hint_word_a} / ${data.hint_word_b})`;
-  } catch (e: unknown) {
-    puzzleResult = `❌ exception: ${e instanceof Error ? e.message : String(e)}`;
+    puzzle = error ? `❌ ${error.message}` : data ? `✅ #${data.puzzle_number}: ${data.hint_word_a}/${data.hint_word_b}` : '❌ no row found';
+  } catch (err) {
+    puzzle = `❌ ${String(err)}`;
   }
 
-  return NextResponse.json({
-    env: envResult,
-    serverDate: today,
-    puzzle: puzzleResult,
-  });
+  return NextResponse.json({ today, envVars, puzzle });
 }
